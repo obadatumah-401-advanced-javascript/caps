@@ -1,31 +1,37 @@
 'use strict';
 
+
 require('dotenv').config();
-const net = require('net');
 
-const client = new net.Socket();
+const PORT = process.env.PORT;
 
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || 'localhost';
+const io = require('socket.io-client');
+const caps = io.connect(`http://localhost:${PORT}/caps`);
 
-client.connect(PORT, HOST, () => {
-  console.log('connected to server from driver');
 
-  client.on('data', (serverData) => {
-    const parsedServerData = JSON.parse(serverData.toString().trim());
-    if (parsedServerData.event === 'pickup') {
-      setTimeout(function () {
-        const payloadD = parsedServerData.payload;
-        console.log(`picking up ${payloadD.orderId}`);
-        const message = JSON.stringify({ event: 'in-transit', time: new Date(), payload: payloadD });
-        client.write(message);
+caps.on('connect', () => {
+  let room = process.env.STORE_NAME;
+  console.log(room);
+  caps.emit('join', room);
+  caps.on('joined', (joinedRoom) => {
+    room = joinedRoom;
+
+    caps.on('message', (serverMessage) => {
+      if (serverMessage.event === 'pickup') {
         setTimeout(function () {
-          const message = JSON.stringify({ event: 'delivered', time: new Date(), payload: parsedServerData.payload });
-          client.write(message);
-          console.log(`delivered ${payloadD.orderId}`);
-        }, 3000);
-      }, 1000);
-    }
+          const payload = serverMessage.payload;
+          console.log(`picking up ${payload.orderId}`);
+          const message = { event: 'in-transit', time: new Date(), payload: payload };
+          caps.emit('message', message);
+          setTimeout(function () {
+            const message = { event: 'delivered', time: new Date(), payload: payload };
+            caps.emit('message', message);
+            console.log(`delivered ${payload.orderId}`);
+          }, 3000);
+        }, 1500);
+      }
+    });
+    
+    
   });
-
 });
