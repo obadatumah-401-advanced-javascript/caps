@@ -1,17 +1,31 @@
 'use strict';
 
-require('dotenv').config();
+const io = require('socket.io')(3000);
 
-const io = require('socket.io')(process.env.PORT);
-
-require('./caps.js')(io);
-
-io.on('connection', (socket) => {
-  console.log(`Welcome to the global connection of the caps app ${socket.id}`);
-  socket.on('error', (error) => {
-    io.emit('error', error);
+io.of('/caps').on('connection', (socket) => {
+  console.log('Welcome Global Connection', socket.id);
+  let currentRoom = '';
+  socket.on('join', (room) => {
+    socket.leave(currentRoom);
+    socket.join(room);
+    currentRoom = room;
+    console.log('joined room', room);
   });
-  socket.on('action', (payload) => {
-    io.emit('action', payload);
+  socket.on('pickup',data => {
+    console.log('Data Picked up');
+    io.of('/caps').to('caps').emit('msg',data);
+    io.of('/caps').to('driver').emit('msg',data);
+  });
+
+
+  socket.on('in-transit',data => {
+    console.log('Data in-transit');
+    io.of('/caps').to('caps').emit('msg',data);
+  });
+
+  socket.on('delivered',data => {
+    console.log('Data delivered');
+    io.of('/caps').to('caps').emit('msg',data);
+    io.of('/caps').to('vendor').emit('msg',data);
   });
 });
