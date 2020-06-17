@@ -1,40 +1,24 @@
 'use strict';
-​
-require('dotenv').config();
+
 const faker = require('faker');
-const PORT = process.env.PORT
-​
+
 const io = require('socket.io-client');
-const caps = io.connect(`http://localhost:${PORT}/caps`);
-​
-caps.on('connect', () => {
-    let room = process.env.STORE_NAME;
-    caps.emit('join', room);
-    caps.on('joined', (joinedRoom) => {
-        room = joinedRoom;
-​
-        setInterval(createOrder, 5000);
-​
-        function createOrder() {
-​
-            const order = {
-                storeName: process.env.STORE || 'OBADASTORE',
-                orderId: faker.random.uuid(),
-                customerName: faker.name.findName(),
-                address: faker.address.city()
-            }
-            const message = { event: "pickup", time: new Date(), payload: order };
-            
-            caps.emit('message', message);
-            
-        }
-​
-        caps.on('message', (message) => {
-            if (message.event === 'delivered'){
-                console.log(`thank you for delivering ${message.payload.orderId}`);
-            }
-        });
-​
-    });
-​
-})
+const caps = io.connect('http://localhost:3000/caps');
+
+caps.emit('join', 'vendor');
+
+
+setInterval(() => {
+  let data = {
+    storeName: process.env.STORE || 'OBADASTORE',
+    customerName: faker.name.findName(),
+    orderID: faker.random.uuid(),
+    address: faker.address.streetAddress(),
+  };
+  let event = { event: 'pickup', time: new Date(), payload: data };
+  caps.emit('pickup', event);
+}, 5000);
+
+caps.on('msg',data =>{
+  console.log('Thank you',data.payload.orderID);
+});

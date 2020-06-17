@@ -1,25 +1,10 @@
 'use strict';
 
-require('dotenv').config();
-module.exports = (io) => {
-  const caps = io.of('/caps');
-  caps.on('connection', (socket) => {
-    console.log(`welcome to the caps namespace ${socket.id}`);
-    let currentRoom = '';
-    socket.on('join', (room) => {
-      socket.leave(currentRoom);
-      socket.join(room);
-      currentRoom = room;
-      console.log(`${socket.id} room ${room}`);
-      io.emit('action', `${socket.id} room ${room}`);
-      caps.to(`${socket.id}`).emit('joined', room);
+const io = require('socket.io-client');
+const caps = io.connect('http://localhost:3000/caps');
 
-      socket.on('message', (message) => {
-        console.log(message);
-        caps.to(currentRoom).emit('message', message);
-      });
-    });
-  });
-};
+caps.emit('join','caps');
 
-
+caps.on('msg',data =>{
+  console.log('Event',data);
+});
